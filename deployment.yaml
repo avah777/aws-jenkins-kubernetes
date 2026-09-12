@@ -1,0 +1,56 @@
+apiVersion: apps/v1
+kind: Deployment
+
+metadata:
+  name: aws-java-app
+  namespace: devops-demo
+
+spec:
+
+  replicas: 2
+
+  selector:
+    matchLabels:
+      app: aws-java-app
+
+  template:
+
+    metadata:
+      labels:
+        app: aws-java-app
+
+    spec:
+
+      containers:
+
+        - name: aws-java-app
+
+          image: avah777/aws-jenkins-kubernetes:v1.0
+
+          ports:
+            - containerPort: 8080
+
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+
+            initialDelaySeconds: 10
+            periodSeconds: 10
+
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+
+            initialDelaySeconds: 30
+            periodSeconds: 20
