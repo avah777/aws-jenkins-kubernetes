@@ -81,8 +81,9 @@ pipeline {
                 sh """
                     kubectl set image deployment/${K8S_DEPLOYMENT} \
                     ${K8S_DEPLOYMENT}=${DOCKER_IMAGE}:${BUILD_NUMBER} \
-                    -n ${K8S_NAMESPACE}
-
+                    -n ${K8S_NAMESPACE} {
+		     withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'jenkins-eks-policys']]) {
+         	      withKubeConfig([credentialsId: 'kubeconfig'])
                     kubectl rollout status \
                     deployment/${K8S_DEPLOYMENT} \
                     -n ${K8S_NAMESPACE}
@@ -90,7 +91,7 @@ pipeline {
             }
         }
     }
-
+}
     post {
         success {
             echo 'CI/CD deployment successful!'
