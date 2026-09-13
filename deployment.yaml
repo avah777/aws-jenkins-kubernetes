@@ -25,7 +25,7 @@ spec:
 
         - name: aws-java-app
 
-          image: avah777/aws-jenkins-kubernetes:v1.0
+          image: avah777/aws-jenkins-kubernetes:lastest
 
           ports:
             - containerPort: 8080
