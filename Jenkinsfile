@@ -4,7 +4,7 @@ pipeline {
 
     environment {
 
-        DOCKER_IMAGE = 'avah777/aws-jenkins-kubernetes:lastest'
+        DOCKER_IMAGE = 'avah777/aws-jenkins-kubernetes:'
 
         K8S_NAMESPACE = 'devops-demo'
 
