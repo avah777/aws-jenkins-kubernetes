@@ -57,11 +57,13 @@ pipeline {
 
         stage('Docker Push') {
             steps {
-                withCredentials([usernamePassword(
-                    credentialsId: 'dockerhub-credentials',
-                    usernameVariable: 'DOCKER_USERNAME',
-                    passwordVariable: 'DOCKER_PASSWORD'
-                )]) {
+                withCredentials([
+                    usernamePassword(
+                        credentialsId: 'dockerhub-credentials',
+                        usernameVariable: 'DOCKER_USERNAME',
+                        passwordVariable: 'DOCKER_PASSWORD'
+                    )
+                ]) {
                     sh '''
                         echo "$DOCKER_PASSWORD" | docker login \
                         -u "$DOCKER_USERNAME" \
@@ -77,27 +79,29 @@ pipeline {
         }
 
         stage('Deploy to Kubernetes') {
-    steps {
-        withCredentials([
-            [$class: 'AmazonWebServicesCredentialsBinding',
-             credentialsId: 'jenkins-eks-policys']
-        ]) {
-            withKubeConfig([
-                credentialsId: 'kubeconfig'
-            ]) {
-                sh """
-                    kubectl set image deployment/${K8S_DEPLOYMENT} \
-                    ${K8S_DEPLOYMENT}=${DOCKER_IMAGE}:${BUILD_NUMBER} \
-                    -n ${K8S_NAMESPACE}
+            steps {
+                withCredentials([
+                    [$class: 'AmazonWebServicesCredentialsBinding',
+                     credentialsId: 'jenkins-eks-policys']
+                ]) {
+                    withKubeConfig([
+                        credentialsId: 'kubeconfig'
+                    ]) {
+                        sh """
+                            kubectl set image deployment/${K8S_DEPLOYMENT} \
+                            ${K8S_DEPLOYMENT}=${DOCKER_IMAGE}:${BUILD_NUMBER} \
+                            -n ${K8S_NAMESPACE}
 
-                    kubectl rollout status \
-                    deployment/${K8S_DEPLOYMENT} \
-                    -n ${K8S_NAMESPACE}
-                """
+                            kubectl rollout status \
+                            deployment/${K8S_DEPLOYMENT} \
+                            -n ${K8S_NAMESPACE}
+                        """
+                    }
+                }
             }
         }
     }
-}
+
     post {
         success {
             echo 'CI/CD deployment successful!'
