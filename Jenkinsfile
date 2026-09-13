@@ -82,7 +82,7 @@ pipeline {
             steps {
                 withCredentials([
                     [$class: 'AmazonWebServicesCredentialsBinding',
-                     credentialsId: 'jenkins-eks-policys']
+                     credentialsId: 'jenkins-eks-policy2']
                 ]) {
                     withKubeConfig([
                         credentialsId: 'kubeconfig'
