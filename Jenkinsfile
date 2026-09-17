@@ -5,7 +5,11 @@ pipeline {
         DOCKER_IMAGE = 'avah777/aws-jenkins-kubernetes'
         K8S_NAMESPACE = 'devops-demo'
         K8S_DEPLOYMENT = 'aws-java-app'
-	EKS_CLUSTER = 'devops-cluster'
+		EKS_CLUSTER = 'devops-cluster'
+    	AWS_REGION = 'us-east-1'
+    	CONTAINER_NAME = 'aws-java-app'
+    	IMAGE_TAG = "${BUILD_NUMBER}"
+    	IMAGE_URI = "${DOCKER_IMAGE}:${BUILD_NUMBER}"
     }
 
     stages {
