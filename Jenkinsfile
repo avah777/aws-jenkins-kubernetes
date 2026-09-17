@@ -5,6 +5,7 @@ pipeline {
         DOCKER_IMAGE = 'avah777/aws-jenkins-kubernetes'
         K8S_NAMESPACE = 'devops-demo'
         K8S_DEPLOYMENT = 'aws-java-app'
+	EKS_CLUSTER = 'devops-cluster'
     }
 
     stages {
