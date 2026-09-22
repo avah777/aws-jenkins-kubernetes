@@ -22,19 +22,41 @@ pipeline {
 
         stage('Test') {
             steps {
-                sh 'mvn clean test'
+                sh '''
+		 export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
+           	 export PATH=$JAVA_HOME/bin:$PATH
+
+           	 echo "Maven Java:"
+           	 java -version
+
+           	 echo "Maven:"
+           	 mvn -version
+
+           	 mvn clean test
+     	       '''
             }
         }
 
         stage('Build') {
             steps {
-                sh 'mvn clean package -DskipTests'
+                sh '''
+         	   export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
+         	   export PATH=$JAVA_HOME/bin:$PATH
+
+         	   echo "Maven Java:"
+         	   java -version
+
+         	   echo "Maven:"
+         	   mvn -version
+
+         	   mvn clean package -DskipTests
+      	        '''
             }
         }
 
         stage('Check Files') {
             steps {
-                sh '''
+                 sh '''
                     echo "===== CURRENT DIRECTORY ====="
                     pwd
 
