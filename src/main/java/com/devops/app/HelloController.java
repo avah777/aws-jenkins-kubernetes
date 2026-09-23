@@ -6,7 +6,7 @@ import java.util.Map;
 public class HelloController {
     @GetMapping("/")
     public String home() {
-        return "Hello from Jenkins + Docker + Kubernetes + AWS!";
+        return "Hello from Jenkins + Docker + Kubernetes + AWS V2.0 webhook!";
     }
     @GetMapping("/health")
     public Map<String, String> health() {
