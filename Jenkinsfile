@@ -2,15 +2,19 @@ pipeline {
     agent any
 
     environment {
-	JAVA17_HOME = '/usr/lib/jvm/java-17-openjdk-amd64'       
-	 DOCKER_IMAGE = 'avah777/aws-jenkins-kubernetes'
+        JAVA17_HOME = '/usr/lib/jvm/java-17-openjdk-amd64'
+
+        DOCKER_IMAGE = 'avah777/aws-jenkins-kubernetes'
+
+        AWS_REGION = 'us-east-1'
+        EKS_CLUSTER = 'devops-demo'
+
         K8S_NAMESPACE = 'devops-demo'
         K8S_DEPLOYMENT = 'aws-java-app'
-	EKS_CLUSTER = 'devops-demo'
-    	AWS_REGION = 'us-east-1'
-    	CONTAINER_NAME = 'aws-java-app'
-    	IMAGE_TAG = "${BUILD_NUMBER}"
-    	IMAGE_URI = "${DOCKER_IMAGE}:${BUILD_NUMBER}"
+        CONTAINER_NAME = 'aws-java-app'
+
+        IMAGE_TAG = "${BUILD_NUMBER}"
+        IMAGE_URI = "${DOCKER_IMAGE}:${BUILD_NUMBER}"
     }
 
     stages {
@@ -24,40 +28,42 @@ pipeline {
         stage('Test') {
             steps {
                 sh '''
-		 export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
-           	 export PATH=$JAVA_HOME/bin:$PATH
+                    export JAVA_HOME="$JAVA17_HOME"
+                    export PATH="$JAVA_HOME/bin:$PATH"
 
-           	 echo "Maven Java:"
-           	 java -version
+                    echo "===== MAVEN JAVA ====="
+                    java -version
 
-           	 echo "Maven:"
-           	 mvn -version
+                    echo "===== MAVEN ====="
+                    mvn -version
 
-           	 mvn clean test
-     	       '''
+                    echo "===== RUNNING TESTS ====="
+                    mvn clean test
+                '''
             }
         }
 
         stage('Build') {
             steps {
                 sh '''
-         	   export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
-         	   export PATH=$JAVA_HOME/bin:$PATH
+                    export JAVA_HOME="$JAVA17_HOME"
+                    export PATH="$JAVA_HOME/bin:$PATH"
 
-         	   echo "Maven Java:"
-         	   java -version
+                    echo "===== MAVEN JAVA ====="
+                    java -version
 
-         	   echo "Maven:"
-         	   mvn -version
+                    echo "===== MAVEN ====="
+                    mvn -version
 
-         	   mvn clean package -DskipTests
-      	        '''
+                    echo "===== BUILDING APPLICATION ====="
+                    mvn clean package -DskipTests
+                '''
             }
         }
 
         stage('Check Files') {
             steps {
-                 sh '''
+                sh '''
                     echo "===== CURRENT DIRECTORY ====="
                     pwd
 
@@ -75,11 +81,14 @@ pipeline {
 
         stage('Docker Build') {
             steps {
-                sh """
+                sh '''
+                    echo "===== DOCKER BUILD ====="
+
                     docker build \
-                    -t ${DOCKER_IMAGE}:${BUILD_NUMBER} \
-                    -t ${DOCKER_IMAGE}:latest .
-                """
+                        -t ${DOCKER_IMAGE}:${BUILD_NUMBER} \
+                        -t ${DOCKER_IMAGE}:latest \
+                        .
+                '''
             }
         }
 
@@ -93,11 +102,18 @@ pipeline {
                     )
                 ]) {
                     sh '''
+                        echo "===== DOCKER HUB LOGIN ====="
+
                         echo "$DOCKER_PASSWORD" | docker login \
-                        -u "$DOCKER_USERNAME" \
-                        --password-stdin
+                            -u "$DOCKER_USERNAME" \
+                            --password-stdin
+
+                        echo "===== PUSH BUILD IMAGE ====="
 
                         docker push ${DOCKER_IMAGE}:${BUILD_NUMBER}
+
+                        echo "===== PUSH LATEST IMAGE ====="
+
                         docker push ${DOCKER_IMAGE}:latest
 
                         docker logout
@@ -106,56 +122,73 @@ pipeline {
             }
         }
 
+        stage('Deploy to Kubernetes') {
+            steps {
+                withCredentials([
+                    [$class: 'AmazonWebServicesCredentialsBinding',
+                     credentialsId: 'aws-credentials']
+                ]) {
+                    sh '''
+                        set -e
 
-       stage('Deploy to Kubernetes') {
-    steps {
-        withCredentials([
-            [$class: 'AmazonWebServicesCredentialsBinding',
-             credentialsId: 'aws-credentials']
-        ]) {
-            sh '''
-                set -e
+                        echo "===== AWS IDENTITY ====="
+                        aws sts get-caller-identity
 
-                echo "===== AWS IDENTITY ====="
-                aws sts get-caller-identity
+                        echo "===== CONFIGURE EKS ====="
+                        aws eks update-kubeconfig \
+                            --region "$AWS_REGION" \
+                            --name "$EKS_CLUSTER"
 
-                echo "===== CONFIGURE EKS ====="
-                aws eks update-kubeconfig \
-                    --region us-east-1 \
-                    --name devops-demo
+                        echo "===== KUBERNETES CLUSTER ====="
+                        kubectl cluster-info
 
-                echo "===== KUBERNETES CLUSTER ====="
-                kubectl cluster-info
+                        echo "===== KUBERNETES NODES ====="
+                        kubectl get nodes
 
-                echo "===== NODES ====="
-                kubectl get nodes
+                        echo "===== CREATE NAMESPACE ====="
+                        kubectl apply -f namespace.yaml
 
-                echo "===== CREATE NAMESPACE ====="
-                kubectl apply -f namespace.yaml
+                        echo "===== DEPLOY APPLICATION ====="
+                        kubectl apply -f deployment.yaml
 
-                echo "===== DEPLOY APPLICATION ====="
-                kubectl apply -f deployment.yaml
+                        echo "===== CREATE SERVICE ====="
+                        kubectl apply -f service.yaml
 
-                echo "===== CREATE SERVICE ====="
-                kubectl apply -f service.yaml
+                        echo "===== UPDATE IMAGE ====="
+                        kubectl set image deployment/$K8S_DEPLOYMENT \
+                            $CONTAINER_NAME=${IMAGE_URI} \
+                            -n $K8S_NAMESPACE
 
-                echo "===== UPDATE IMAGE ====="
-                kubectl set image deployment/aws-java-app \
-                    aws-java-app=${IMAGE_URI} \
-                    -n devops-demo
+                        echo "===== WAIT FOR ROLLOUT ====="
+                        kubectl rollout status \
+                            deployment/$K8S_DEPLOYMENT \
+                            -n $K8S_NAMESPACE \
+                            --timeout=180s
 
-                echo "===== WAIT FOR ROLLOUT ====="
-                kubectl rollout status \
-                    deployment/aws-java-app \
-                    -n devops-demo \
-                    --timeout=180s
+                        echo "===== PODS ====="
+                        kubectl get pods -n $K8S_NAMESPACE
 
-                echo "===== PODS ====="
-                kubectl get pods -n devops-demo
+                        echo "===== SERVICE ====="
+                        kubectl get svc -n $K8S_NAMESPACE
+                    '''
+                }
+            }
+        }
+    }
 
-                echo "===== SERVICE ====="
-                kubectl get svc -n devops-demo
-            '''
+    post {
+        success {
+            echo 'CI/CD pipeline completed successfully.'
+        }
+
+        failure {
+            echo 'CI/CD pipeline failed.'
+        }
+
+        always {
+            echo 'Pipeline execution finished.'
         }
     }
 }
+
+
