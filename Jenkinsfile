@@ -106,31 +106,56 @@ pipeline {
             }
         }
 
-        stage('Deploy to Kubernetes') {
-            steps {
-                 withKubeConfig([
-                        credentialsId: 'kubeconfig'
-                    ]) {
-                        sh """
-                            kubectl set image deployment/${K8S_DEPLOYMENT} \
-                            ${K8S_DEPLOYMENT}=${DOCKER_IMAGE}:${BUILD_NUMBER} \
-                            -n ${K8S_NAMESPACE}
 
-                            kubectl rollout status \
-                            deployment/${K8S_DEPLOYMENT} \
-                            -n ${K8S_NAMESPACE}
-                        """
-                    }
-                }
-            }
-     
+       stage('Deploy to Kubernetes') {
+    steps {
+        withCredentials([
+            [$class: 'AmazonWebServicesCredentialsBinding',
+             credentialsId: 'aws-credentials']
+        ]) {
+            sh '''
+                set -e
 
-    post {
-        success {
-            echo 'CI/CD deployment successful!'
-        }
+                echo "===== AWS IDENTITY ====="
+                aws sts get-caller-identity
 
-        failure {
-            echo 'CI/CD pipeline failed.'
+                echo "===== CONFIGURE EKS ====="
+                aws eks update-kubeconfig \
+                    --region us-east-1 \
+                    --name devops-demo
+
+                echo "===== KUBERNETES CLUSTER ====="
+                kubectl cluster-info
+
+                echo "===== NODES ====="
+                kubectl get nodes
+
+                echo "===== CREATE NAMESPACE ====="
+                kubectl apply -f namespace.yaml
+
+                echo "===== DEPLOY APPLICATION ====="
+                kubectl apply -f deployment.yaml
+
+                echo "===== CREATE SERVICE ====="
+                kubectl apply -f service.yaml
+
+                echo "===== UPDATE IMAGE ====="
+                kubectl set image deployment/aws-java-app \
+                    aws-java-app=${IMAGE_URI} \
+                    -n devops-demo
+
+                echo "===== WAIT FOR ROLLOUT ====="
+                kubectl rollout status \
+                    deployment/aws-java-app \
+                    -n devops-demo \
+                    --timeout=180s
+
+                echo "===== PODS ====="
+                kubectl get pods -n devops-demo
+
+                echo "===== SERVICE ====="
+                kubectl get svc -n devops-demo
+            '''
         }
     }
+}
