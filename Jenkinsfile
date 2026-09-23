@@ -69,7 +69,7 @@ pipeline {
 
                     echo "===== DOCKERFILE ====="
                     ls -la Dockerfile || true
-                i'''
+                '''
             }
         }
 
