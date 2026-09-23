@@ -108,11 +108,7 @@ pipeline {
 
         stage('Deploy to Kubernetes') {
             steps {
-                withCredentials([
-                    [$class: 'AmazonWebServicesCredentialsBinding',
-                     credentialsId: 'jenkins-eks-policy2']
-                ]) {
-                    withKubeConfig([
+                 withKubeConfig([
                         credentialsId: 'kubeconfig'
                     ]) {
                         sh """
