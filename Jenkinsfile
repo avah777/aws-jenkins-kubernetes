@@ -123,8 +123,7 @@ pipeline {
                     }
                 }
             }
-        }
-    }
+     
 
     post {
         success {
