@@ -2,7 +2,8 @@ pipeline {
     agent any
 
     environment {
-        DOCKER_IMAGE = 'avah777/aws-jenkins-kubernetes'
+	JAVA17_HOME = '/usr/lib/jvm/java-17-openjdk-amd64'       
+	 DOCKER_IMAGE = 'avah777/aws-jenkins-kubernetes'
         K8S_NAMESPACE = 'devops-demo'
         K8S_DEPLOYMENT = 'aws-java-app'
 	EKS_CLUSTER = 'devops-demo'
@@ -68,7 +69,7 @@ pipeline {
 
                     echo "===== DOCKERFILE ====="
                     ls -la Dockerfile || true
-                '''
+                i'''
             }
         }
 
